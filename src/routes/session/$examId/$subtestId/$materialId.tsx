@@ -41,6 +41,7 @@ function SessionScreen() {
   const sessionId = useRef<string | null>(null);
   const questionStart = useRef<number>(0);
   const sessionStart = useRef<number>(0);
+  const explanationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!material) return;
@@ -84,7 +85,9 @@ function SessionScreen() {
       return;
     }
     setRevealed(true);
-    window.scrollTo({ top: 0, behavior: "instant" });
+    requestAnimationFrame(() => {
+      explanationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function advance(score: number) {
