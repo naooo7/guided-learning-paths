@@ -151,7 +151,7 @@ function Change({ value, label, className, compact }: { value: number; label: st
   const Icon = up ? ArrowUp : ArrowDown;
   return (
     <p className={cn("flex items-center gap-1 text-[12px]", className)}>
-      <span className={cn("flex items-center gap-0.5 font-medium", up ? "text-success" : "text-destructive")}>
+      <span className={cn("flex items-center gap-0.5 font-medium", value === 0 ? "text-muted-foreground" : up ? "text-success" : "text-destructive")}>
         <Icon className="size-3" strokeWidth={2.5} />
         {Math.abs(value)}%
       </span>
