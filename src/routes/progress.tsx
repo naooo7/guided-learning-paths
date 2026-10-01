@@ -167,7 +167,7 @@ function SmoothChart({ values, className }: { values: number[]; className?: stri
   const pad = 4;
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const pts = values.map((v, i) => [
+  const pts: [number, number][] = values.map((v, i) => [
     (i / (values.length - 1)) * w,
     h - pad - ((v - min) / (max - min || 1)) * (h - pad * 2),
   ]);
@@ -178,8 +178,8 @@ function SmoothChart({ values, className }: { values: number[]; className?: stri
     const p2 = pts[i + 1]!;
     const p3 = pts[i + 2] ?? p2;
     const t = 0.18;
-    const c1 = [p1[0] + (p2[0] - p0[0]) * t, p1[1] + (p2[1] - p0[1]) * t];
-    const c2 = [p2[0] - (p3[0] - p1[0]) * t, p2[1] - (p3[1] - p1[1]) * t];
+    const c1: number[] = [p1[0] + (p2[0] - p0[0]) * t, p1[1] + (p2[1] - p0[1]) * t];
+    const c2: number[] = [p2[0] - (p3[0] - p1[0]) * t, p2[1] - (p3[1] - p1[1]) * t];
     d += ` C ${c1[0]} ${c1[1]}, ${c2[0]} ${c2[1]}, ${p2[0]} ${p2[1]}`;
   }
   return (
