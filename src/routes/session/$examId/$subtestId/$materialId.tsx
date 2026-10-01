@@ -41,6 +41,7 @@ function SessionScreen() {
   const sessionId = useRef<string | null>(null);
   const questionStart = useRef<number>(0);
   const sessionStart = useRef<number>(0);
+  const explanationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!material) return;
@@ -84,7 +85,9 @@ function SessionScreen() {
       return;
     }
     setRevealed(true);
-    window.scrollTo({ top: 0, behavior: "instant" });
+    requestAnimationFrame(() => {
+      explanationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function advance(score: number) {
@@ -139,72 +142,97 @@ function SessionScreen() {
           <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${((index + 1) / questions.length) * 100}%` }} />
         </div>
 
-        <main key={`${q.id}-${revealed}`} className="screen-in flex-1 pt-7">
-          {revealed ? (
-            <div>
-              <div className="flex items-center gap-2.5">
-                <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", isCorrect ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
-                  {isCorrect ? <Check size={19} strokeWidth={2.5} aria-hidden="true" /> : <X size={19} strokeWidth={2.5} aria-hidden="true" />}
-                </span>
-                <span className={cn("text-[13px] font-semibold", isCorrect ? "text-success" : "text-destructive")}>{isCorrect ? "Correct" : "Incorrect"}</span>
-              </div>
-              <h1 className="mt-5 text-[23px] font-semibold leading-[1.3]">{isCorrect ? "Jawaban kamu benar!" : "Jawaban kamu belum tepat."}</h1>
-              <section className="mt-8 border-t border-border pt-6" aria-labelledby="why-heading">
-                <h2 id="why-heading" className="text-[18px] font-semibold">Why?</h2>
-                <p className="mt-3 text-[15px] leading-[1.65] text-foreground">{q.explanation.why}</p>
-                {q.explanation.steps.length > 0 && (
-                  <ol className="mt-6 space-y-5">
-                    {q.explanation.steps.map((step, i) => (
-                      <li key={i} className="grid grid-cols-[auto_minmax(0,1fr)] gap-4">
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[12px] font-semibold text-primary">{i + 1}</span>
-                        <div className="min-w-0 pt-0.5">
-                          <p className="text-[13px] font-semibold">Step {i + 1}</p>
-                          <p className="mt-1 text-[14px] leading-[1.6] text-muted-foreground">{step}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </section>
-              <div className="mt-8 flex items-center gap-3 rounded-lg border border-success/40 bg-success/5 px-4 py-3.5">
-                <Check className="shrink-0 text-success" size={18} aria-hidden="true" />
-                <div className="min-w-0">
-                  <p className="text-[12px] font-medium text-muted-foreground">Correct answer</p>
-                  <p className="mt-0.5 text-[14px] font-semibold leading-snug">{q.answer}. {correctChoice?.text}</p>
+        <main key={q.id} className="screen-in flex-1 pt-7">
+          <div>
+            <p className="label-xs">{exam?.name ?? examId} · {subtest?.name ?? subtestId}</p>
+            <h1 className="mt-4 text-[19px] font-semibold leading-[1.5]">{q.prompt}</h1>
+
+            <div className="mt-7 grid grid-cols-2 gap-2.5" role="group" aria-label="Answer choices">
+              {q.choices.map((c, i) => {
+                const chosen = selected === c.key;
+                const isAnswer = c.key === q.answer;
+                const isLastChoice = i === q.choices.length - 1;
+                const tone = !revealed
+                  ? chosen
+                    ? "border-primary bg-primary-soft hover:bg-primary-soft"
+                    : "border-border bg-surface hover:border-border-strong hover:bg-surface"
+                  : isAnswer
+                    ? "border-success bg-success/10 hover:bg-success/10"
+                    : chosen
+                      ? "border-destructive bg-destructive/10 hover:bg-destructive/10"
+                      : "border-border bg-surface opacity-50";
+                return (
+                  <Button
+                    key={c.key}
+                    type="button"
+                    variant="outline"
+                    aria-pressed={chosen}
+                    onClick={() => { if (!revealed) setSelected(c.key); }}
+                    className={cn(
+                      "flex min-h-12 h-auto w-full items-center justify-start gap-2.5 whitespace-normal rounded-lg border px-3.5 py-2.5 text-left text-foreground shadow-none",
+                      isLastChoice && "col-span-2 justify-center",
+                      tone,
+                    )}
+                  >
+                    <span className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-md border text-[13px] font-semibold",
+                      revealed
+                        ? isAnswer
+                          ? "border-success bg-success/10 text-success"
+                          : chosen
+                            ? "border-destructive bg-destructive/10 text-destructive"
+                            : "border-border bg-background text-muted-foreground"
+                        : chosen
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-muted-foreground",
+                    )}>
+                      {c.key}
+                    </span>
+                    <span className="min-w-0 flex-1 text-[14px] leading-[1.5]">{c.text}</span>
+                    {!revealed && chosen && <Check className="shrink-0 text-primary" size={17} aria-hidden="true" />}
+                    {revealed && isAnswer && <Check className="shrink-0 text-success" size={17} aria-hidden="true" />}
+                    {revealed && !isAnswer && chosen && <X className="shrink-0 text-destructive" size={17} aria-hidden="true" />}
+                  </Button>
+                );
+              })}
+            </div>
+
+            {revealed && (
+              <div ref={explanationRef} className="mt-8" role="status">
+                <div className="flex items-center gap-2.5">
+                  <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", isCorrect ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
+                    {isCorrect ? <Check size={19} strokeWidth={2.5} aria-hidden="true" /> : <X size={19} strokeWidth={2.5} aria-hidden="true" />}
+                  </span>
+                  <span className={cn("text-[13px] font-semibold", isCorrect ? "text-success" : "text-destructive")}>{isCorrect ? "Correct" : "Incorrect"}</span>
+                </div>
+                <h2 className="mt-5 text-[23px] font-semibold leading-[1.3]">{isCorrect ? "Jawaban kamu benar!" : "Jawaban kamu belum tepat."}</h2>
+                <section className="mt-8 border-t border-border pt-6" aria-labelledby="why-heading">
+                  <h3 id="why-heading" className="text-[18px] font-semibold">Why?</h3>
+                  <p className="mt-3 text-[15px] leading-[1.65] text-foreground">{q.explanation.why}</p>
+                  {q.explanation.steps.length > 0 && (
+                    <ol className="mt-6 space-y-5">
+                      {q.explanation.steps.map((step, i) => (
+                        <li key={i} className="grid grid-cols-[auto_minmax(0,1fr)] gap-4">
+                          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[12px] font-semibold text-primary">{i + 1}</span>
+                          <div className="min-w-0 pt-0.5">
+                            <p className="text-[13px] font-semibold">Step {i + 1}</p>
+                            <p className="mt-1 text-[14px] leading-[1.6] text-muted-foreground">{step}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </section>
+                <div className="mt-8 flex items-center gap-3 rounded-lg border border-success/40 bg-success/5 px-4 py-3.5">
+                  <Check className="shrink-0 text-success" size={18} aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-medium text-muted-foreground">Correct answer</p>
+                    <p className="mt-0.5 text-[14px] font-semibold leading-snug">{q.answer}. {correctChoice?.text}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div>
-              <p className="label-xs">{exam?.name ?? examId} · {subtest?.name ?? subtestId}</p>
-              <h1 className="mt-4 text-[19px] font-semibold leading-[1.5]">{q.prompt}</h1>
-
-          <div className="mt-7 space-y-2.5" role="group" aria-label="Answer choices">
-            {q.choices.map((c) => {
-              const chosen = selected === c.key;
-              return (
-                <Button
-                  key={c.key}
-                  type="button"
-                  variant="outline"
-                  aria-pressed={chosen}
-                  onClick={() => setSelected(c.key)}
-                  className={cn(
-                    "flex min-h-14 h-auto w-full items-center justify-start gap-3.5 whitespace-normal rounded-lg border px-4 py-3 text-left text-foreground shadow-none",
-                    chosen ? "border-primary bg-primary-soft hover:bg-primary-soft" : "border-border bg-surface hover:border-border-strong hover:bg-surface",
-                  )}
-                >
-                  <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-md border text-[13px] font-semibold", chosen ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground")}>
-                    {c.key}
-                  </span>
-                  <span className="min-w-0 flex-1 text-[14px] leading-[1.5]">{c.text}</span>
-                  {chosen && <Check className="shrink-0 text-primary" size={17} aria-hidden="true" />}
-                </Button>
-              );
-            })}
+            )}
           </div>
-            </div>
-          )}
         </main>
 
         <div className="sticky bottom-0 -mx-5 mt-6 border-t border-border bg-background/95 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:-mx-6 sm:px-6">
